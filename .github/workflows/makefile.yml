@@ -1,0 +1,59 @@
+name: Make a build on every submit
+
+permissions:
+  contents: write
+on:
+  push:
+    tags: 
+      - "v*"
+      - "babeld-*"
+      - "nightly*"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+        ref: ${{ github.ref }}
+    - name: Install musl-tools
+      run: |
+        set -ex
+        sudo apt-get update
+        sudo apt-get install -y linux-headers-generic musl-tools
+    - name: prepare sabotage-linux headers for musl
+      run: |
+        cd /tmp
+        wget https://github.com/sabotage-linux/kernel-headers/releases/download/v4.19.88-1/linux-headers-4.19.88-1.tar.xz
+        echo "cd4c77b83d169c75bac1417acb23c5b1de20eb598cd93324b6d09eb441d0fce481e331e285cf783d2d56f6e38b6d9557c55d67ded57c2133d9952a5ba4e0fa3b linux-headers-4.19.88-1.tar.xz" | sha512sum --check --status
+        tar -xf linux-headers-4.19.88-1.tar.xz
+        cd linux-headers-4.19.88-1
+        sudo make ARCH=x86_64 prefix=/usr/include/sabotage-linux-headers/ install
+    - name: Make library and install to ./output
+      run: |
+        # Patch
+        sudo patch /usr/lib/x86_64-linux-musl/musl-gcc.specs ./.github/musl.patch
+        EXTRA_DEFINES="-I/usr/include/sabotage-linux-headers/include -fstack-protector-all -D_FORTIFY_SOURCE=2 -Wl,-z,relro,-z,now -static-pie" CC=musl-gcc TARGET=./output make -j8 install
+    - name: Make artifact
+      id: artifact_info
+      run: |
+        cd ./output
+        if [[ "${{ github.ref_name }}" == nightly* ]]; then
+            name="nightly-$(echo ${{ github.sha }} | cut -c 1-8)"
+            is_draft=true
+        else
+            name="${{ github.ref_name }}"
+            is_draft=false
+        fi
+        tar -czf "../${name}.tar.gz" .
+        cd ..
+        sha256sum "./${name}.tar.gz" >${name}.tar.gz.checksum
+        echo "is_draft=$is_draft" >> $GITHUB_OUTPUT
+        echo "name=$name" >> $GITHUB_OUTPUT
+    - name: Make Release
+      uses: softprops/action-gh-release@v1
+      with:
+        prerelease: ${{ steps.artifact_info.outputs.is_draft }}
+        files: |
+          *.tar.gz
+          *.tar.gz.checksum

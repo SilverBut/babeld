@@ -1,0 +1,8 @@
+16c16
+< %{!shared: /usr/lib/x86_64-linux-musl/Scrt1.o} /usr/lib/x86_64-linux-musl/crti.o crtbeginS.o%s
+---
+> %{static-pie: /usr/lib/x86_64-linux-musl/rcrt1.o; !shared: /usr/lib/x86_64-linux-musl/Scrt1.o} /usr/lib/x86_64-linux-musl/crti.o crtbeginS.o%s
+22c22
+< -dynamic-linker /lib/ld-musl-x86_64.so.1 -nostdlib %{shared:-shared} %{static:-static} %{rdynamic:-export-dynamic}
+---
+> -dynamic-linker /lib/ld-musl-x86_64.so.1 -nostdlib %{shared:-shared} %{static:-static} %{static-pie:-static -pie --no-dynamic-linker} %{rdynamic:-export-dynamic}
