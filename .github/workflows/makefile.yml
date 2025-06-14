@@ -31,8 +31,8 @@ jobs:
         sudo make ARCH=x86_64 prefix=/usr/include/sabotage-linux-headers/ install
     - name: Make library and install to ./output
       run: |
-        # Patch
-        sudo patch /usr/lib/x86_64-linux-musl/musl-gcc.specs ./.github/musl.patch
+        ## Patch seems no longer needed in ubuntu 24
+        # sudo patch /usr/lib/x86_64-linux-musl/musl-gcc.specs ./.github/musl.patch
         EXTRA_DEFINES="-I/usr/include/sabotage-linux-headers/include -fstack-protector-all -D_FORTIFY_SOURCE=2 -Wl,-z,relro,-z,now -static-pie" CC=musl-gcc TARGET=./output make -j8 install
     - name: Make artifact
       id: artifact_info
