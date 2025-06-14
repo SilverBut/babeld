@@ -370,7 +370,7 @@ free_filter(struct filter *f)
 static int
 parse_filter(int c, gnc_t gnc, void *closure, struct filter **filter_return)
 {
-    char *token;
+    char *token = NULL;
     struct filter *filter;
 
     filter = calloc(1, sizeof(struct filter));
@@ -684,6 +684,12 @@ parse_anonymous_ifconf(int c, gnc_t gnc, void *closure,
             if(c < -1)
                 goto error;
             if_conf->v4viav6 = v;
+        } else if(strcmp(token, "probe-mtu") == 0) {
+            int v;
+            c = getbool(c, &v, gnc, closure);
+            if(c < -1)
+                goto error;
+            if_conf->probe_mtu = v;
         } else {
             goto error;
         }
@@ -705,7 +711,7 @@ static int
 parse_ifconf(int c, gnc_t gnc, void *closure,
              struct interface_conf **if_conf_return)
 {
-    char *token;
+    char *token = NULL;
     struct interface_conf *if_conf;
 
     if_conf = calloc(1, sizeof(struct interface_conf));
@@ -901,6 +907,7 @@ merge_ifconf(struct interface_conf *dest,
     MERGE(rtt_max);
     MERGE(max_rtt_penalty);
     MERGE(v4viav6);
+    MERGE(probe_mtu);
     MERGE(key);
 
 #undef MERGE
@@ -1496,13 +1503,14 @@ redistribute_filter(const unsigned char *prefix, unsigned short plen,
 }
 
 int
-install_filter(const unsigned char *prefix, unsigned short plen,
+install_filter(const unsigned char *id,
+               const unsigned char *prefix, unsigned short plen,
                const unsigned char *src_prefix, unsigned short src_plen,
                unsigned int ifindex,
                struct filter_result *result)
 {
     int res;
-    res = do_filter(install_filters, NULL, prefix, plen,
+    res = do_filter(install_filters, id, prefix, plen,
                     src_prefix, src_plen, NULL, ifindex, 0, result);
     if(res < 0)
         res = INFINITY;

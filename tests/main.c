@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2007, 2008 by Juliusz Chroboczek
+Copyright (c) 2024 by Tomaz Mascarenhas
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,11 +20,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-int babel_socket(int port);
-int babel_recv(int s, void *buf, int buflen, struct sockaddr *sin, int slen,
-               unsigned char *src_return);
-int babel_send(int s,
-               const void *buf1, int buflen1, const void *buf2, int buflen2,
-               const struct sockaddr *sin, int slen, int dontfrag);
-int tcp_server_socket(int port, int local);
-int unix_server_socket(const char *path);
+#include "hmac_test.h"
+#include "route_test.h"
+#include "test_utilities.h"
+#include "util_test.h"
+
+int main(int argc, char **argv)
+{
+    run_suite(util_test_suite, "util.c");
+    run_suite(hmac_test_suite, "hmac.c");
+    run_suite(route_test_suite, "route.c");
+    return tests_failed;
+}

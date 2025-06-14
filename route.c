@@ -41,19 +41,20 @@ THE SOFTWARE.
 #include "local.h"
 
 struct babel_route **routes = NULL;
-static int route_slots = 0, max_route_slots = 0;
+static int max_route_slots = 0;
+int route_slots = 0;
 int kernel_metric = 0, reflect_kernel_metric = 0;
 int allow_duplicates = -1;
 int diversity_factor = 256;     /* in units of 1/256 */
 
-static int smoothing_half_life = 0;
-static int two_to_the_one_over_hl = 0; /* 2^(1/hl) * 0x10000 */
+int smoothing_half_life = 0;
+int two_to_the_one_over_hl = 0; /* 2^(1/hl) * 0x10000 */
 
 /* We maintain a list of "slots", ordered by prefix.  Every slot
    contains a linked list of the routes to this prefix, with the
    installed route, if any, at the head of the list. */
 
-static int
+int
 route_compare(const unsigned char *prefix, unsigned char plen,
               const unsigned char *src_prefix, unsigned char src_plen,
               struct babel_route *route)
@@ -94,7 +95,7 @@ route_compare(const unsigned char *prefix, unsigned char plen,
 /* Performs binary search, returns -1 in case of failure.  In the latter
    case, new_return is the place where to insert the new element. */
 
-static int
+int
 find_route_slot(const unsigned char *prefix, unsigned char plen,
                 const unsigned char *src_prefix, unsigned char src_plen,
                 int *new_return)
@@ -189,7 +190,7 @@ resize_route_table(int new_slots)
 
 /* Insert a route into the table.  If successful, retains the route.
    On failure, caller must free the route. */
-static struct babel_route *
+struct babel_route *
 insert_route(struct babel_route *route)
 {
     int i, n;
@@ -261,7 +262,7 @@ flush_route(struct babel_route *route)
                         (route_slots - i - 1) * sizeof(struct babel_route*));
             routes[route_slots - 1] = NULL;
             route_slots--;
-            VALGRIND_MAKE_MEM_UNDEFINED(routes + route_slots, sizeof(struct route *));
+            VALGRIND_MAKE_MEM_UNDEFINED(routes + route_slots, sizeof(struct babel_route *));
         }
 
         if(route_slots == 0)
@@ -405,7 +406,7 @@ route_stream_done(struct route_stream *stream)
     free(stream);
 }
 
-static int
+int
 metric_to_kernel(int metric)
 {
         if(metric >= INFINITY) {
@@ -446,7 +447,8 @@ change_route(int operation, const struct babel_route *route, int metric,
     unsigned int ifindex = route->neigh->ifp->ifindex;
     int m, table;
 
-    m = install_filter(route->src->prefix, route->src->plen,
+    m = install_filter(route->src->id,
+                       route->src->prefix, route->src->plen,
                        route->src->src_prefix, route->src->src_plen,
                        ifindex, &filter_result);
     if(m >= INFINITY && operation == ROUTE_ADD) {
@@ -566,7 +568,7 @@ switch_routes(struct babel_route *old, struct babel_route *new)
     local_notify_route(new, LOCAL_CHANGE);
 }
 
-static void
+void
 change_route_metric(struct babel_route *route,
                     unsigned refmetric, unsigned cost, unsigned add)
 {
